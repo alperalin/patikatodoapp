@@ -1,7 +1,14 @@
-import React from 'react';
+// Imports
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+// Styles
 import './App.css';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
+
+// Components
+import LoginRegister from './components/Login/LoginRegister';
+
+// MUI
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
@@ -27,12 +34,6 @@ const style = {
 	p: 4,
 };
 
-interface TabPanelProps {
-	children?: React.ReactNode;
-	index: number;
-	value: number;
-}
-
 interface Todo {
 	id: number;
 	text: string;
@@ -42,62 +43,57 @@ interface Todo {
 interface Category {
 	id: number;
 	name: string;
-	statu?: {
+	status?: {
 		id: number;
 		name: string;
 	};
 }
 
-function TabPanel(props: TabPanelProps) {
-	const { children, value, index, ...other } = props;
-
-	return (
-		<div
-			role="tabpanel"
-			hidden={value !== index}
-			id={`simple-tabpanel-${index}`}
-			aria-labelledby={`simple-tab-${index}`}
-			{...other}
-		>
-			{value === index && (
-				<Box sx={{ p: 3 }}>
-					<Typography>{children}</Typography>
-				</Box>
-			)}
-		</div>
-	);
+export interface Login {
+	username: string;
+	password: string;
 }
 
-function a11yProps(index: number) {
-	return {
-		id: `simple-tab-${index}`,
-		'aria-controls': `simple-tabpanel-${index}`,
-	};
+export interface Register extends Login {
+	passwordConfirm: string;
 }
 
 function App() {
 	// STATES
-	const [value, setValue] = React.useState(0);
-	const [isLogin, setIsLogin] = React.useState<boolean>(false);
-	const [categoryList, setCategoryList] = React.useState<Category[]>([]);
-	const [categorySelect, setCategorySelect] = React.useState('');
-	const [categoryText, setCategoryText] = React.useState<string>('');
-	const [statu, setStatu] = React.useState('');
-	const [todoList, setTodoList] = React.useState<Todo[]>([]);
-	const [todoText, setTodoText] = React.useState<string>('');
-	const [open, setOpen] = React.useState(false);
+	const [token, setToken] = useState<string>(() => getCookie('token') || '');
+	const [categoryList, setCategoryList] = useState<Category[]>([]);
+	const [categorySelect, setCategorySelect] = useState('');
+	const [categoryText, setCategoryText] = useState<string>('');
+	const [status, setStatus] = useState('');
+	const [todoList, setTodoList] = useState<Todo[]>([]);
+	const [todoText, setTodoText] = useState<string>('');
+	const [open, setOpen] = useState(false);
+
+	useEffect(() => console.log(token), [token]);
 
 	// FUNCTIONS
+	function getCookie(cname: string): string {
+		let name = cname + '=';
+		let decodedCookie = decodeURIComponent(document.cookie);
+		let ca = decodedCookie.split(';');
+		for (let i = 0; i < ca.length; i++) {
+			let c = ca[i];
+			while (c.charAt(0) === ' ') {
+				c = c.substring(1);
+			}
+			if (c.indexOf(name) === 0) {
+				return c.substring(name.length, c.length);
+			}
+		}
+		return '';
+	}
+
 	const handleCategorySelectChange = (event: SelectChangeEvent) => {
 		setCategorySelect(event.target.value as string);
 	};
 
-	const handleStatuChange = (event: SelectChangeEvent) => {
-		setStatu(event.target.value as string);
-	};
-
-	const handleChange = (event: React.SyntheticEvent, newValue: number) => {
-		setValue(newValue);
+	const handleStatusChange = (event: SelectChangeEvent) => {
+		setStatus(event.target.value as string);
 	};
 
 	const handleSubmit = (event: React.SyntheticEvent) => {
@@ -110,9 +106,9 @@ function App() {
 				category: {
 					id: Math.round(Math.random() * 1000),
 					name: categorySelect,
-					statu: {
+					status: {
 						id: Math.round(Math.random() * 1000),
-						name: statu,
+						name: status,
 					},
 				},
 			},
@@ -133,11 +129,71 @@ function App() {
 	const handleOpen = () => setOpen(true);
 	const handleClose = () => setOpen(false);
 
+	// Handle Login
+	function handleLogin(formData: Login): void {
+		const data = JSON.stringify(formData);
+		axios
+			.post('http://localhost:80/auth/login', data, {
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
+			.then((response) => {
+				if (response.status === 200) {
+					const token = response.data.token;
+					document.cookie = `token=${token}`;
+					setToken(token);
+				}
+			})
+			.catch((error) =>
+				console.log(
+					`error code: ${error.response.status} message: ${error.response.data}`
+				)
+			);
+	}
+
+	// Handle Register
+	function handleRegister(formData: Register): void {
+		const data = JSON.stringify(formData);
+		axios
+			.post('http://localhost:80/auth/register', data, {
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
+			.then((response) => {
+				if (response.status === 200) {
+					const token = response.data.token;
+					document.cookie = `token=${token}`;
+					setToken(token);
+				}
+			})
+			.catch((error) =>
+				console.log(
+					`error code: ${error.response.status} message: ${error.response.data}`
+				)
+			);
+	}
+
 	return (
-		<>
-			{isLogin ? (
-				<Box sx={{ width: '100%' }}>
-					<h1>TodoList</h1>
+		<Box
+			sx={{
+				maxWidth: '100%',
+				width: '100%',
+				p: 2,
+				boxSizing: 'border-box',
+			}}
+		>
+			{token ? (
+				<>
+					{/* // APP */}
+					<Typography variant="h1" component="h1" gutterBottom>
+						TodoList App
+					</Typography>
+
+					<Typography variant="h2" gutterBottom component="h1">
+						Todo Ekle
+					</Typography>
 					<Box
 						component="form"
 						sx={{
@@ -163,7 +219,7 @@ function App() {
 								labelId="demo-simple-select-label"
 								id="categorySelect"
 								value={categorySelect}
-								label="Kategori"
+								label="Kategori Sec"
 								onChange={handleCategorySelectChange}
 							>
 								{categoryList.map((category) => (
@@ -178,9 +234,9 @@ function App() {
 							<Select
 								labelId="demo-simple-select-label"
 								id="statuSelect"
-								value={statu}
-								label="Kategori"
-								onChange={handleStatuChange}
+								value={status}
+								label="Statu Sec"
+								onChange={handleStatusChange}
 							>
 								<MenuItem value={10}>Statu 1</MenuItem>
 								<MenuItem value={20}>Statu 2</MenuItem>
@@ -193,7 +249,59 @@ function App() {
 						</Button>
 					</Box>
 
-					<h2>TODOS</h2>
+					<Typography variant="h2" gutterBottom component="h1">
+						Filtrele
+					</Typography>
+					<Box
+						component="form"
+						sx={{
+							'& .MuiTextField-root': { m: 1, width: '25ch' },
+						}}
+						noValidate
+						autoComplete="off"
+						onSubmit={handleSubmit}
+					>
+						<FormControl sx={{ m: 1, minWidth: 120 }}>
+							<InputLabel id="demo-simple-select-label">Kategori</InputLabel>
+							<Select
+								labelId="demo-simple-select-label"
+								id="categorySelect"
+								value={categorySelect}
+								label="Kategori Sec"
+								onChange={handleCategorySelectChange}
+							>
+								{categoryList.map((category) => (
+									<MenuItem value={category.id.toString()}>
+										{category.name}
+									</MenuItem>
+								))}
+							</Select>
+						</FormControl>
+						<FormControl sx={{ m: 1, minWidth: 120 }}>
+							<InputLabel id="demo-simple-select-label">Statu</InputLabel>
+							<Select
+								labelId="demo-simple-select-label"
+								id="statuSelect"
+								value={status}
+								label="Statu Sec"
+								onChange={handleStatusChange}
+							>
+								<MenuItem value={10}>Statu 1</MenuItem>
+								<MenuItem value={20}>Statu 2</MenuItem>
+								<MenuItem value={30}>Statu 3</MenuItem>
+							</Select>
+						</FormControl>
+						<Button type="submit" variant="contained">
+							Filtrele
+						</Button>
+						<Button type="button" variant="outlined">
+							Filtreyi Temizle
+						</Button>
+					</Box>
+
+					<Typography variant="h2" gutterBottom component="h1">
+						Todo Listesi
+					</Typography>
 					<Box
 						sx={{
 							'& .MuiTextField-root': { m: 1, width: '25ch' },
@@ -206,18 +314,51 @@ function App() {
 								<ListItem key={todo.id}>
 									<ListItemText
 										primary={`${todo.text} ${todo.category.name} ${
-											todo.category.statu ? todo.category.statu.name : ''
+											todo.category.status ? todo.category.status.name : ''
 										}`}
 									/>
+									<FormControl sx={{ m: 1, minWidth: 120 }}>
+										<InputLabel id="demo-simple-select-label">
+											Kategori
+										</InputLabel>
+										<Select
+											labelId="demo-simple-select-label"
+											id="categorySelect"
+											value={categorySelect}
+											label="Kategori Sec"
+											onChange={handleCategorySelectChange}
+										>
+											{categoryList.map((category) => (
+												<MenuItem value={todo.category.id.toString()}>
+													{todo.category.name}
+												</MenuItem>
+											))}
+										</Select>
+									</FormControl>
+									<FormControl sx={{ m: 1, minWidth: 120 }}>
+										<InputLabel id="demo-simple-select-label">Statu</InputLabel>
+										<Select
+											labelId="demo-simple-select-label"
+											id="statuSelect"
+											value={status}
+											label="Statu Sec"
+											onChange={handleStatusChange}
+										>
+											<MenuItem value={10}>
+												{todo.category.status ? todo.category.status.name : ''}
+											</MenuItem>
+										</Select>
+									</FormControl>
 								</ListItem>
 							))}
 						</List>
 					</Box>
 
 					<Button type="button" variant="contained" onClick={handleOpen}>
-						Kategori duzenle
+						Kategorileri duzenle
 					</Button>
 
+					{/* Kategorileri Duzenleme Modali */}
 					<Modal
 						open={open}
 						onClose={handleClose}
@@ -278,78 +419,12 @@ function App() {
 							</Box>
 						</Box>
 					</Modal>
-				</Box>
+				</>
 			) : (
-				<Box sx={{ width: '100%' }}>
-					<Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-						<Tabs
-							value={value}
-							onChange={handleChange}
-							aria-label="basic tabs example"
-						>
-							<Tab label="Login" {...a11yProps(0)} />
-							<Tab label="Register" {...a11yProps(1)} />
-						</Tabs>
-					</Box>
-					<TabPanel value={value} index={0}>
-						<Box
-							component="form"
-							sx={{
-								'& .MuiTextField-root': { m: 1, width: '25ch' },
-							}}
-							noValidate
-							autoComplete="off"
-						>
-							<TextField
-								id="username"
-								label="Kullanici Ismi"
-								placeholder="Kullanici Ismi"
-								required
-							/>
-							<TextField
-								id="password"
-								label="Password"
-								type="password"
-								autoComplete="current-password"
-								required
-							/>
-							<br />
-							<Button variant="contained" onClick={() => setIsLogin(true)}>
-								Giris Yap
-							</Button>
-						</Box>
-					</TabPanel>
-					<TabPanel value={value} index={1}>
-						<Box
-							component="form"
-							sx={{
-								'& .MuiTextField-root': { m: 1, width: '25ch' },
-							}}
-							noValidate
-							autoComplete="off"
-						>
-							<TextField
-								id="username"
-								label="Kullanici Ismi"
-								placeholder="Kullanici Ismi"
-								required
-							/>
-							<TextField
-								id="password"
-								label="Password"
-								type="password"
-								autoComplete="current-password"
-								required
-							/>
-							<br />
-							<Button variant="contained" onClick={() => setIsLogin(true)}>
-								Kayit Ol
-							</Button>
-						</Box>
-					</TabPanel>
-				</Box>
+				// LOGIN REGISTER
+				<LoginRegister onLogin={handleLogin} onRegister={handleRegister} />
 			)}
-		</>
+		</Box>
 	);
 }
 
